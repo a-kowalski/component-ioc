@@ -3,14 +3,9 @@
 /**
  * Define any consts that are used by the tested code.
  */
-define('SRC_PATH', realpath('./test'));
+define('SRC_PATH', realpath(dirname(__FILE__)));
 
 /**
  * Add the default worker test case to use within this test suite.
  */
-require_once 'IocTestCase.php';
-
-/**
- * Add an empty exception class to use for testing exception handlers.
- */
-class GenericException extends \Exception {}
+require_once SRC_PATH . DIRECTORY_SEPARATOR . '__bootstrap/TestCase.php';

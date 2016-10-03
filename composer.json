@@ -1,6 +1,6 @@
 {
     "name": "maleficarum/ioc",
-    "description": "IoC component",
+    "description": "Maleficarum IoC component.",
     "require": {
         "php": ">=5.6"
     },
