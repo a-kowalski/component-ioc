@@ -4,10 +4,11 @@
  */
 namespace Maleficarum\Ioc;
 
-class Container {
+class Container
+{
     /**
      * Internal storage for the default builder definition file
-     * 
+     *
      * @var string
      */
     private static $defaultBuilders = null;
@@ -45,12 +46,10 @@ class Container {
      *
      * @param string $name
      * @param \Closure $closure
-     *
-     * @throws \InvalidArgumentException
      */
-    public static function register($name, \Closure $closure) {
-        if (!is_string($name)) {
-            throw new \InvalidArgumentException('Invalid name argument - not a string. \Maleficarum\Ioc\Container::register()');
+    public static function register(string $name, \Closure $closure) {
+        if (self::isRegistered($name)) {
+            throw new \RuntimeException(sprintf('Another closure with given name is already registered. \%s::register()', static::class));
         }
 
         self::$initializers[$name] = $closure;
@@ -63,27 +62,14 @@ class Container {
      * @param array $opts
      *
      * @return object
-     * @throws \InvalidArgumentException
-     * @throws \RuntimeException
      */
-    public static function get($name, array $opts = []) {
-        // validate input
-        if (!is_string($name)) {
-            throw new \InvalidArgumentException('Invalid name argument - not a string. \Maleficarum\Ioc\Container::get()');
-        }
-        
+    public static function get(string $name, array $opts = []) {
         // fetch decremental builder names
         $name = self::reduce($name);
         $prefix = $name[count($name) - 1];
-        
+
         // lazy-load IOC definitions for specified namespace (only once)
-        if (!in_array($prefix, self::$loadedDefinitions) && isset(self::$namespaces[$prefix])) {
-            require_once self::$namespaces[$prefix] . DIRECTORY_SEPARATOR . $prefix . '.php';
-            self::$loadedDefinitions[] = $prefix;
-        } elseif (is_string(self::$defaultBuilders) && !in_array('*', self::$loadedDefinitions)) {
-            require_once self::$defaultBuilders;
-            self::$loadedDefinitions[] = '*';
-        }
+        self::includeFile($prefix);
 
         // attempt to execute builders
         foreach ($name as $builder) {
@@ -95,35 +81,13 @@ class Container {
         }
 
         // reaching this point means that no valid builder was found - execute generic ones
-        if (!count($opts)) {
+        if (empty($opts)) {
             return new $name[0]();
-        } else {
-            $reflection = new \ReflectionClass($name[0]);
-
-            return $reflection->newInstanceArgs($opts);
-        }
-    }
-
-    /**
-     * Reduce specified name to a list of decremental namespaces.
-     *
-     * @param string $name
-     *
-     * @return array
-     */
-    private static function reduce($name) {
-        // initialize
-        $result = [];
-        $name = explode('\\', $name);
-        $index = count($name);
-
-        // create handler results
-        while ($index-- > 0) {
-            $result[] = implode('\\', array_slice($name, 0, $index + 1));
         }
 
-        // conclude
-        return $result;
+        $reflection = new \ReflectionClass($name[0]);
+
+        return $reflection->newInstanceArgs($opts);
     }
 
     /**
@@ -132,18 +96,9 @@ class Container {
      * @param string $name
      *
      * @return bool
-     * @throws \InvalidArgumentException
      */
-    public static function isRegistered($name) {
-        if (!is_string($name)) {
-            throw new \InvalidArgumentException('Invalid name argument - not a string. \Maleficarum\Ioc\Container::isRegistered()');
-        }
-
-        if (array_key_exists($name, self::$initializers)) {
-            return true;
-        }
-
-        return false;
+    public static function isRegistered(string $name) : bool {
+        return array_key_exists($name, self::$initializers);
     }
 
     /**
@@ -152,11 +107,11 @@ class Container {
      * @param string $name
      * @param mixed $value
      *
-     * @throws \InvalidArgumentException
+     * @throws \RuntimeException
      */
-    public static function registerDependency($name, $value) {
-        if (!is_string($name)) {
-            throw new \InvalidArgumentException('Invalid name argument - not a string. \Maleficarum\Ioc\Container::registerDependency()');
+    public static function registerDependency(string $name, $value) {
+        if (array_key_exists($name, self::$dependencies)) {
+            throw new \RuntimeException(sprintf('Dependency with given name is already registered. \%s::registerDependency()', static::class));
         }
 
         self::$dependencies[$name] = $value;
@@ -169,41 +124,63 @@ class Container {
      * @param string $path
      *
      * @throws \RuntimeException
-     * @throws \InvalidArgumentException
      */
-    public static function addNamespace($ns, $path) {
-        if (!is_string($ns)) {
-            throw new \InvalidArgumentException('Invalid namespace argument - not a string. \Maleficarum\Ioc\Container::addNamespace()');
-        }
-
-        if (!is_string($path)) {
-            throw new \InvalidArgumentException('Invalid path argument - not a string. \Maleficarum\Ioc\Container::addNamespace()');
-        }
-
+    public static function addNamespace(string $ns, string $path) {
         if (array_key_exists($ns, self::$namespaces)) {
-            throw new \RuntimeException('Namespace with given name already exist. \Maleficarum\Ioc\Container::addNamespace()');
+            throw new \RuntimeException(sprintf('Namespace with given name already exist. \%s::addNamespace()', static::class));
         }
 
         self::$namespaces[$ns] = $path;
     }
-    
+
     /**
      * Set the path to a file with default builder definitions.
-     * 
-     * @param $path
-     * 
+     *
+     * @param string $path
+     *
      * @throws \RuntimeException
-     * @throws \InvalidArgumentException
      */
-    public static function setDefaultBuilders($path) {
-        if (!is_string($path)) {
-            throw new \InvalidArgumentException('Invalid path argument - not a string. \Maleficarum\Ioc\Container::setDefaultBuilders()');
+    public static function setDefaultBuilders(string $path) {
+        if (!is_null(self::$defaultBuilders)) {
+            throw new \RuntimeException(sprintf('Default builders already set. \%s::setDefaultBuilders()', static::class));
         }
 
-        if (!is_null(self::$defaultBuilders)) {
-            throw new \RuntimeException('Default builders already set. \Maleficarum\Ioc\Container::setDefaultBuilders()');
-        }
-        
         self::$defaultBuilders = $path;
+    }
+
+    /**
+     * Reduce specified name to a list of decremental namespaces.
+     *
+     * @param string $name
+     *
+     * @return array
+     */
+    private static function reduce(string $name) : array {
+        $delimiter = '\\';
+        $name = explode($delimiter, $name);
+        $index = count($name);
+
+        // create handler results
+        $result = [];
+        while ($index-- > 0) {
+            $result[] = implode($delimiter, array_slice($name, 0, $index + 1));
+        }
+
+        return $result;
+    }
+
+    /**
+     * Includes file with given prefix or load default builder definition file
+     *
+     * @param string $prefix
+     */
+    private static function includeFile(string $prefix) {
+        if (!in_array($prefix, self::$loadedDefinitions, true) && isset(self::$namespaces[$prefix])) {
+            require_once self::$namespaces[$prefix] . DIRECTORY_SEPARATOR . $prefix . '.php';
+            self::$loadedDefinitions[] = $prefix;
+        } elseif (is_string(self::$defaultBuilders) && !in_array('*', self::$loadedDefinitions, true)) {
+            require_once self::$defaultBuilders;
+            self::$loadedDefinitions[] = '*';
+        }
     }
 }
