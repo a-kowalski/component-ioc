@@ -3,7 +3,7 @@ This is the Maleficarum IOC Container implementation.
 
 ## [2.0.0] - 2017-01-11
 ### Changed
-- Make use of PHP 7.1 return and argument types declaration
+- Make use of PHP 7 return and argument types declaration
 
 ## [1.1.0] - 2016-10-03
 ### Changed

@@ -47,7 +47,7 @@ class Container
      * @param string $name
      * @param \Closure $closure
      */
-    public static function register(string $name, \Closure $closure) : void {
+    public static function register(string $name, \Closure $closure) {
         if (self::isRegistered($name)) {
             throw new \RuntimeException(sprintf('Another closure with given name is already registered. \%s::register()', static::class));
         }
@@ -109,7 +109,7 @@ class Container
      *
      * @throws \RuntimeException
      */
-    public static function registerDependency(string $name, $value) : void {
+    public static function registerDependency(string $name, $value) {
         if (array_key_exists($name, self::$dependencies)) {
             throw new \RuntimeException(sprintf('Dependency with given name is already registered. \%s::registerDependency()', static::class));
         }
@@ -125,7 +125,7 @@ class Container
      *
      * @throws \RuntimeException
      */
-    public static function addNamespace(string $ns, string $path) : void {
+    public static function addNamespace(string $ns, string $path) {
         if (array_key_exists($ns, self::$namespaces)) {
             throw new \RuntimeException(sprintf('Namespace with given name already exist. \%s::addNamespace()', static::class));
         }
@@ -140,7 +140,7 @@ class Container
      *
      * @throws \RuntimeException
      */
-    public static function setDefaultBuilders(string $path) : void {
+    public static function setDefaultBuilders(string $path) {
         if (!is_null(self::$defaultBuilders)) {
             throw new \RuntimeException(sprintf('Default builders already set. \%s::setDefaultBuilders()', static::class));
         }
@@ -174,7 +174,7 @@ class Container
      *
      * @param string $prefix
      */
-    private static function includeFile(string $prefix) : void {
+    private static function includeFile(string $prefix) {
         if (!in_array($prefix, self::$loadedDefinitions, true) && isset(self::$namespaces[$prefix])) {
             require_once self::$namespaces[$prefix] . DIRECTORY_SEPARATOR . $prefix . '.php';
             self::$loadedDefinitions[] = $prefix;
