@@ -9,7 +9,7 @@ class Container
     /**
      * Internal storage for the default builder definition file
      *
-     * @var string
+     * @var string|null
      */
     private static $defaultBuilders = null;
 
@@ -46,6 +46,9 @@ class Container
      *
      * @param string $name
      * @param \Closure $closure
+     * 
+     * @return void
+     * @throws \RuntimeException
      */
     public static function register(string $name, \Closure $closure) {
         if (self::isRegistered($name)) {
@@ -107,6 +110,7 @@ class Container
      * @param string $name
      * @param mixed $value
      *
+     * @return void
      * @throws \RuntimeException
      */
     public static function registerDependency(string $name, $value) {
@@ -123,6 +127,7 @@ class Container
      * @param string $ns
      * @param string $path
      *
+     * @return void
      * @throws \RuntimeException
      */
     public static function addNamespace(string $ns, string $path) {
@@ -138,6 +143,7 @@ class Container
      *
      * @param string $path
      *
+     * @return void
      * @throws \RuntimeException
      */
     public static function setDefaultBuilders(string $path) {
@@ -173,6 +179,8 @@ class Container
      * Includes file with given prefix or load default builder definition file
      *
      * @param string $prefix
+     * 
+     * @return void
      */
     private static function includeFile(string $prefix) {
         if (!in_array($prefix, self::$loadedDefinitions, true) && isset(self::$namespaces[$prefix])) {
