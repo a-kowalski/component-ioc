@@ -1,6 +1,10 @@
 # Change Log
 This is the Maleficarum IOC Container implementation. 
 
+## [2.0.1] - 2017-02-15
+### Added
+- Add tests
+
 ## [2.0.0] - 2017-01-23
 ### Changed
 - Add return and argument types declaration

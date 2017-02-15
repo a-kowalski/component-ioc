@@ -1,19 +1,15 @@
 <?php
-
 declare(strict_types=1);
 
 /**
  * Tests for the \Maleficarum\Ioc\Container class.
  */
 
-namespace Maleficarum\Ioc\Test;
+namespace Maleficarum\Ioc\Tests;
 
-class ContainerTest extends \Maleficarum\Ioc\Test\TestCase
+class ContainerTest extends \PHPUnit\Framework\TestCase
 {
-    /**
-     * FIXTURES
-     */
-
+    /* ------------------------------------ Fixtures START --------------------------------------------- */
     public static function setUpBeforeClass() {
         // execute parent functionality
         parent::setUpBeforeClass();
@@ -28,7 +24,7 @@ class ContainerTest extends \Maleficarum\Ioc\Test\TestCase
         // test namespaced builder file
         \Maleficarum\Ioc\Container::addNamespace('Namespaced', SRC_PATH . DIRECTORY_SEPARATOR . '__definitions');
 
-        // test tependecy
+        // test dependency
         \Maleficarum\Ioc\Container::registerDependency('Registered\Dependency', $object);
 
         // register a test class builder
@@ -42,37 +38,9 @@ class ContainerTest extends \Maleficarum\Ioc\Test\TestCase
             return $object;
         });
     }
+    /* ------------------------------------ Fixtures END ----------------------------------------------- */
 
-    /**
-     * DATA PROVIDERS
-     */
-
-    public function invalidDataProvider() {
-        return [
-            [null],
-            [[]],
-            [(new \stdClass())],
-            [true],
-            [false],
-            [0],
-            [1.0]
-        ];
-    }
-
-    /**
-     * TESTS
-     */
-
-    /** METHOD: \Maleficarum\Ioc\Container::registerDependency() */
-
-    /**
-     * @expectedException \TypeError
-     * @dataProvider invalidDataProvider
-     */
-    public function testRegisterDependencyWithIncorrectName($name) {
-        \Maleficarum\Ioc\Container::registerDependency($name, []);
-    }
-
+    /* ------------------------------------ Method: registerDependency START --------------------------- */
     /**
      * @expectedException \RuntimeException
      */
@@ -80,60 +48,24 @@ class ContainerTest extends \Maleficarum\Ioc\Test\TestCase
         \Maleficarum\Ioc\Container::registerDependency('foo', []);
         \Maleficarum\Ioc\Container::registerDependency('foo', []);
     }
+    /* ------------------------------------ Method: registerDependency END ----------------------------- */
 
-    /** METHOD: \Maleficarum\Ioc\Container::setDefaultBuilders() */
-
-    /**
-     * @expectedException \TypeError
-     * @dataProvider invalidDataProvider
-     */
-    public function testSetDefaultBuildersWithIncorrectPath($path) {
-        \Maleficarum\Ioc\Container::setDefaultBuilders($path);
-    }
-
+    /* ------------------------------------ Method: setDefaultBuilders START --------------------------- */
     /**
      * @expectedException \RuntimeException
      */
     public function testSetDefaultBuildersWithDuplicatePath() {
         \Maleficarum\Ioc\Container::setDefaultBuilders('./test');
     }
+    /* ------------------------------------ Method: setDefaultBuilders END ----------------------------- */
 
-    /** METHOD: \Maleficarum\Ioc\Container::addNamespace() */
-
+    /* ------------------------------------ Method: addNamespace START --------------------------------- */
     /**
      * @expectedException \RuntimeException
      */
     public function testExistingNamespace() {
         \Maleficarum\Ioc\Container::addNamespace('foo', 'bar');
         \Maleficarum\Ioc\Container::addNamespace('foo', 'bar');
-    }
-
-    /**
-     * @expectedException \TypeError
-     * @dataProvider invalidDataProvider
-     */
-    public function testInvalidNamespace($ns) {
-        \Maleficarum\Ioc\Container::addNamespace($ns, 'bar');
-    }
-
-    /**
-     * @expectedException \TypeError
-     * @dataProvider invalidDataProvider
-     */
-    public function testInvalidPath($path) {
-        \Maleficarum\Ioc\Container::addNamespace('foo', $path);
-    }
-
-    /** METHOD: \Maleficarum\Ioc\Container::register() */
-
-    /**
-     * @expectedException \TypeError
-     * @dataProvider invalidDataProvider
-     */
-    public function testRegisterIncorrectName($name) {
-        \Maleficarum\Ioc\Container::register($name, function () {
-            return true;
-        });
     }
 
     /**
@@ -148,25 +80,9 @@ class ContainerTest extends \Maleficarum\Ioc\Test\TestCase
             return true;
         });
     }
+    /* ------------------------------------ Method: addNamespace END ----------------------------------- */
 
-    /**
-     * @expectedException \TypeError
-     * @dataProvider invalidDataProvider
-     */
-    public function testRegisterIncorrectClosure($builder) {
-        \Maleficarum\Ioc\Container::register('testClass', $builder);
-    }
-
-    /** METHOD: \Maleficarum\Ioc\Container::get() */
-
-    /**
-     * @expectedException \TypeError
-     * @dataProvider invalidDataProvider
-     */
-    public function testGetWithIncorrectName($name) {
-        \Maleficarum\Ioc\Container::get($name);
-    }
-
+    /* ------------------------------------ Method: get START ------------------------------------------ */
     public function testGetDefault() {
         $this->assertInstanceOf('stdClass', \Maleficarum\Ioc\Container::get('stdClass'));
     }
@@ -213,17 +129,9 @@ class ContainerTest extends \Maleficarum\Ioc\Test\TestCase
         $this->assertInstanceOf('stdClass', $object);
         $this->assertSame($object->default_global, true);
     }
+    /* ------------------------------------ Method: get END -------------------------------------------- */
 
-    /** METHOD: \Maleficarum\Ioc\Container::isRegistered() */
-
-    /**
-     * @expectedException \TypeError
-     * @dataProvider invalidDataProvider
-     */
-    public function testIsRegisteredWithIncorrectName($name) {
-        \Maleficarum\Ioc\Container::isRegistered($name);
-    }
-
+    /* ------------------------------------ Method: isRegistered START --------------------------------- */
     public function testIsRegisteredWithFalseResult() {
         $this->assertFalse(\Maleficarum\Ioc\Container::isRegistered(uniqid()));
     }
@@ -231,4 +139,5 @@ class ContainerTest extends \Maleficarum\Ioc\Test\TestCase
     public function testIsRegisteredWithTrueResult() {
         $this->assertTrue(\Maleficarum\Ioc\Container::isRegistered('Registered\Return\Std\Class\With\Values'));
     }
+    /* ------------------------------------ Method: isRegistered END ----------------------------------- */
 }
