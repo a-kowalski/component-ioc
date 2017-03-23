@@ -2,10 +2,11 @@
 /**
  * The purpose of this class is to act as a Dependency Injection service provider thus fulfilling the Inversion of Control aspect of Dependency Injection.
  */
+declare (strict_types=1);
+
 namespace Maleficarum\Ioc;
 
-class Container
-{
+class Container {
     /**
      * Internal storage for the default builder definition file
      *
@@ -46,7 +47,6 @@ class Container
      *
      * @param string $name
      * @param \Closure $closure
-     * 
      * @return void
      * @throws \RuntimeException
      */
@@ -63,7 +63,6 @@ class Container
      *
      * @param string $name
      * @param array $opts
-     *
      * @return object
      */
     public static function get(string $name, array $opts = []) {
@@ -97,7 +96,6 @@ class Container
      * Check if an object of the specified name can be provided by this container.
      *
      * @param string $name
-     *
      * @return bool
      */
     public static function isRegistered(string $name) : bool {
@@ -109,7 +107,6 @@ class Container
      *
      * @param string $name
      * @param mixed $value
-     *
      * @return void
      * @throws \RuntimeException
      */
@@ -120,13 +117,26 @@ class Container
 
         self::$dependencies[$name] = $value;
     }
-
+    
+    /**
+     * Fetch a registered dependency.
+     * 
+     * @param string $name
+     * @return mixed
+     */
+    public static function getDependency(string $name) {
+        if (!array_key_exists($name, self::$dependencies)) {
+            throw new \RuntimeException(sprintf('Dependency with given name is not registered. \%s::registerDependency()', static::class));
+        }
+        
+        return self::$dependencies[$name];
+    }
+    
     /**
      * Add single namespace with path.
      *
      * @param string $ns
      * @param string $path
-     *
      * @return void
      * @throws \RuntimeException
      */
@@ -142,7 +152,6 @@ class Container
      * Set the path to a file with default builder definitions.
      *
      * @param string $path
-     *
      * @return void
      * @throws \RuntimeException
      */
@@ -158,7 +167,6 @@ class Container
      * Reduce specified name to a list of decremental namespaces.
      *
      * @param string $name
-     *
      * @return array
      */
     private static function reduce(string $name) : array {
@@ -179,7 +187,6 @@ class Container
      * Includes file with given prefix or load default builder definition file
      *
      * @param string $prefix
-     * 
      * @return void
      */
     private static function includeFile(string $prefix) {
