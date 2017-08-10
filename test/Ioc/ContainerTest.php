@@ -129,8 +129,29 @@ class ContainerTest extends \PHPUnit\Framework\TestCase
         $this->assertInstanceOf('stdClass', $object);
         $this->assertSame($object->default_global, true);
     }
+    
+    public function testGetAppended() {
+        $object = \Maleficarum\Ioc\Container::get('Namespaced\Appended');
+        $this->assertInstanceOf('stdClass', $object);
+        $this->assertSame($object->namespaced_appended, true);
+    }
+
+    public function testGetAppendedCounter() {
+        $object = \Maleficarum\Ioc\Container::get('Namespaced\Appended');
+        $this->assertInstanceOf('stdClass', $object);
+        $this->assertSame($object->appendCount, 2);
+    }
     /* ------------------------------------ Method: get END -------------------------------------------- */
 
+    /* ------------------------------------ Method: append START --------------------------------------- */
+    /**
+     * @expectedException \RuntimeException
+     */
+    public function testAppendWithoutMain() {
+        \Maleficarum\Ioc\Container::append(uniqid(), function() {});
+    }
+    /* ------------------------------------ Method: append END ----------------------------------------- */
+    
     /* ------------------------------------ Method: isRegistered START --------------------------------- */
     public function testIsRegisteredWithFalseResult() {
         $this->assertFalse(\Maleficarum\Ioc\Container::isRegistered(uniqid()));
