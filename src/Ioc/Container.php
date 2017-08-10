@@ -43,6 +43,13 @@ class Container {
     private static $loadedDefinitions = [];
 
     /**
+     * Internal storage for appended builder functions.
+     * 
+     * @var array
+     */
+    private static $appends = [];
+
+    /**
      * Register a new initializer closure.
      *
      * @param string $name
@@ -52,12 +59,29 @@ class Container {
      */
     public static function register(string $name, \Closure $closure) {
         if (self::isRegistered($name)) {
-            throw new \RuntimeException(sprintf('Another closure with given name is already registered. \%s::register()', static::class));
+            throw new \RuntimeException(sprintf('Another closure with given name is already registered. Use append instead. \%s::register()', static::class));
         }
 
         self::$initializers[$name] = $closure;
     }
-
+    
+    /**
+     * Append new builder to an existing chain of builders.
+     * 
+     * @param string   $name
+     * @param \Closure $closure
+     * @return void
+     * @throws \RuntimeException
+     */
+    public static function append(string $name, \Closure $closure) {
+        if (!self::isRegistered($name)) {
+            throw new \RuntimeException(sprintf('Main builder missing - cannot append. Use register instead. \%s::append()', static::class));
+        }
+        
+        array_key_exists($name, self::$appends) or self::$appends[$name] = [];
+        self::$appends[$name][] = $closure;
+    }
+    
     /**
      * Fetch a new instance of the specified class.
      *
@@ -78,7 +102,20 @@ class Container {
             if (self::isRegistered($builder)) {
                 $init = self::$initializers[$builder];
 
-                return $init(self::$dependencies, array_key_exists('__class', $opts) ? $opts : array_merge($opts, ['__class' => $name[0]]));
+                // create desired instance
+                $opts = array_key_exists('__class', $opts) ? $opts : array_merge($opts, ['__class' => $name[0]]);
+                $instance = $init(self::$dependencies, $opts);
+                
+                // run through the builder chain if one exists
+                if (array_key_exists($builder, self::$appends)) {
+                    foreach (self::$appends[$builder] as $append) {
+                        $opts['__instance'] = $instance;
+                        $instance = $append(self::$dependencies, $opts);
+                    }
+                }
+                
+                // return constructed instance
+                return $instance;
             }
         }
 

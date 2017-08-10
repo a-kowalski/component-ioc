@@ -1,6 +1,10 @@
 # Change Log
 This is the Maleficarum IOC Container implementation. 
 
+## [2.2.0] - 2017-08-10
+### Added
+- Added support for builder appends.
+
 ## [2.1.0] - 2017-03-23
 ### Added
 - Added a way to access registered dependencies from outside of builder functions.
