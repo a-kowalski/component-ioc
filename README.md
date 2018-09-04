@@ -1,7 +1,7 @@
 # Change Log
 This is the Maleficarum IOC Container implementation. 
 
-## [3.0.0] - 2018-08-31
+## [3.0.0] - 2018-09-04
 > CAUTION:
 > this version completely breaks backwards compatibility with 2.x. DO NOT just replace older version with this one.
 ### Changed

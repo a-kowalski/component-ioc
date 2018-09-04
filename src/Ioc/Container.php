@@ -141,7 +141,7 @@ class Container {
      * @param bool $exactMatch
      * @return object
      */
-    public static function get(string $name, array $opts = [], bool $exactMatch = false) {
+    public static function get(string $name, array $opts = [], bool $exactMatch = false): Object {
         // fetch decremental builder names
         $nameTree = self::reduce($name);
         
