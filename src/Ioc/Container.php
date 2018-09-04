@@ -7,175 +7,123 @@ declare (strict_types=1);
 namespace Maleficarum\Ioc;
 
 class Container {
+    /* ------------------------------------ Class Property START --------------------------------------- */
+    
     /**
-     * Internal storage for the default builder definition file
-     *
-     * @var string|null
-     */
-    private static $defaultBuilders = null;
-
-    /**
-     * Internal storage for namespaces
-     *
+     * This attribute stores a list of namespace definitions that should have their builder autoloaded.
+     * 
+     * @Example:
+     * [
+     *      // This\Is\A\Namespace (will load file /tmp/Ioc/This.php)
+     *      'This' => '/tmp/Ioc',
+     *         
+     *      // That\Is\A\Namespace\As|Well (will load file /tmp/Ioc/That.php)
+     *      'That => '/tmp/Ioc',
+     *         
+     *      // Another\Namespace\Definition (will load file /tmp/Ioc/Another/Namespace.php)
+     *      'Another\Namespace' => '/tmp/Ioc'
+     * ]
      * @var array
      */
     private static $namespaces = [];
 
     /**
-     * Internal storage for object initializer closures.
-     *
+     * This attribute stores all builders defined in the container. Each builder is stored under an index the represents either a full class name (with namespace)
+     * or a partial namespace.
+     * 
+     * @Example:
+     * [
+     *      // full class name (with namespace)
+     *      'Data\Product\Entity' => function() {},
+     *         
+     *      // partial class namespace (will be called for all classes that share this namespace section)
+     *      'Data\Product' => function() {},
+     *         
+     *      // entire namespace builder (will be called for all classes in that namespace)
+     *      'Data' => function() {}
+     * ]
      * @var array
      */
-    private static $initializers = [];
+    private static $builders = [];
 
     /**
-     * Internal storage for available dependencies.
-     *
+     * This attributes stores all defined shared instances. Those can be registered using registerShare() and retrieved using retrieveShare().
+     * 
      * @var array
      */
-    private static $dependencies = [];
+    private static $shares = [];
 
     /**
-     * Internal storage for a list of ioc definitions that we either loaded or checked for existence.
-     *
+     * This attributes acts as a registry for autoloaded definitions - this is used to ensue that we do not attempt to reload any loaded builder files.
+     * 
      * @var array
      */
     private static $loadedDefinitions = [];
-
-    /**
-     * Internal storage for appended builder functions.
-     * 
-     * @var array
-     */
-    private static $appends = [];
-
-    /**
-     * Register a new initializer closure.
-     *
-     * @param string $name
-     * @param \Closure $closure
-     * @return void
-     * @throws \RuntimeException
-     */
-    public static function register(string $name, \Closure $closure) {
-        if (self::isRegistered($name)) {
-            throw new \RuntimeException(sprintf('Another closure with given name is already registered. Use append instead. \%s::register()', static::class));
-        }
-
-        self::$initializers[$name] = $closure;
-    }
     
-    /**
-     * Append new builder to an existing chain of builders.
-     * 
-     * @param string   $name
-     * @param \Closure $closure
-     * @return void
-     * @throws \RuntimeException
-     */
-    public static function append(string $name, \Closure $closure) {
-        if (!self::isRegistered($name)) {
-            throw new \RuntimeException(sprintf('Main builder missing - cannot append. Use register instead. \%s::append()', static::class));
-        }
-        
-        array_key_exists($name, self::$appends) or self::$appends[$name] = [];
-        self::$appends[$name][] = $closure;
-    }
+    /* ------------------------------------ Class Property END ----------------------------------------- */
     
-    /**
-     * Fetch a new instance of the specified class.
-     *
-     * @param string $name
-     * @param array $opts
-     * @return object
-     */
-    public static function get(string $name, array $opts = []) {
-        // fetch decremental builder names
-        $name = self::reduce($name);
-        $prefix = $name[count($name) - 1];
-
-        // lazy-load IOC definitions for specified namespace (only once)
-        self::includeFile($prefix);
-
-        // attempt to execute builders
-        foreach ($name as $builder) {
-            if (self::isRegistered($builder)) {
-                $init = self::$initializers[$builder];
-
-                // create desired instance
-                $opts = array_key_exists('__class', $opts) ? $opts : array_merge($opts, ['__class' => $name[0]]);
-                $instance = $init(self::$dependencies, $opts);
-                
-                // run through the builder chain if one exists
-                if (array_key_exists($builder, self::$appends)) {
-                    foreach (self::$appends[$builder] as $append) {
-                        $opts['__instance'] = $instance;
-                        $instance = $append(self::$dependencies, $opts);
-                    }
-                }
-                
-                // return constructed instance
-                return $instance;
-            }
-        }
-
-        // reaching this point means that no valid builder was found - execute generic ones
-        if (empty($opts)) {
-            return new $name[0]();
-        }
-
-        $reflection = new \ReflectionClass($name[0]);
-
-        return $reflection->newInstanceArgs($opts);
-    }
+    /* ------------------------------------ Class Methods START ---------------------------------------- */
 
     /**
-     * Check if an object of the specified name can be provided by this container.
-     *
+     * Check if a builder with the specified name has been registered.
+     * 
      * @param string $name
      * @return bool
      */
-    public static function isRegistered(string $name) : bool {
-        return array_key_exists($name, self::$initializers);
+    public static function isBuilderRegistered(string $name) : bool {
+        return array_key_exists($name, self::$builders);
     }
 
     /**
-     * Register a new dependency to use inside initializer closures.
-     *
+     * Register a new builder function.
+     * 
+     * @param string $name
+     * @param \Closure $closure
+     * @return void
+     */
+    public static function registerBuilder(string $name, \Closure $closure) {
+        if (self::isBuilderRegistered($name)) {
+            throw new \RuntimeException(sprintf('Another closure with given name is already registered. \%s::registerBuilder()', static::class));
+        }
+
+        self::$builders[$name] = $closure;
+    }
+
+    /**
+     * Register a new share - these will be passed to builder functions whenever one is called.
+     * 
      * @param string $name
      * @param mixed $value
      * @return void
-     * @throws \RuntimeException
      */
-    public static function registerDependency(string $name, $value) {
-        if (array_key_exists($name, self::$dependencies)) {
-            throw new \RuntimeException(sprintf('Dependency with given name is already registered. \%s::registerDependency()', static::class));
+    public static function registerShare(string $name, $value) {
+        if (array_key_exists($name, self::$shares)) {
+            throw new \RuntimeException(sprintf('SHare with given name is already registered. \%s::registerShare()', static::class));
         }
 
-        self::$dependencies[$name] = $value;
+        self::$shares[$name] = $value;
     }
-    
+
     /**
      * Fetch a registered dependency.
      * 
      * @param string $name
      * @return mixed
      */
-    public static function getDependency(string $name) {
-        if (!array_key_exists($name, self::$dependencies)) {
-            throw new \RuntimeException(sprintf('Dependency with given name is not registered. \%s::registerDependency()', static::class));
+    public static function retrieveShare(string $name) {
+        if (!array_key_exists($name, self::$shares)) {
+            throw new \RuntimeException(sprintf('Share with given name is not registered. \%s::retrieveShare()', static::class));
         }
-        
-        return self::$dependencies[$name];
+
+        return self::$shares[$name];
     }
-    
+
     /**
      * Add single namespace with path.
-     *
+     * 
      * @param string $ns
      * @param string $path
      * @return void
-     * @throws \RuntimeException
      */
     public static function addNamespace(string $ns, string $path) {
         if (array_key_exists($ns, self::$namespaces)) {
@@ -184,20 +132,51 @@ class Container {
 
         self::$namespaces[$ns] = $path;
     }
-
+    
     /**
-     * Set the path to a file with default builder definitions.
+     * Fetch a new instance of the specified class.
      *
-     * @param string $path
-     * @return void
-     * @throws \RuntimeException
+     * @param string $name
+     * @param array $opts
+     * @param bool $exactMatch
+     * @return object
      */
-    public static function setDefaultBuilders(string $path) {
-        if (!is_null(self::$defaultBuilders)) {
-            throw new \RuntimeException(sprintf('Default builders already set. \%s::setDefaultBuilders()', static::class));
+    public static function get(string $name, array $opts = [], bool $exactMatch = false) {
+        // fetch decremental builder names
+        $nameTree = self::reduce($name);
+        
+        // lazy-load IOC definitions for specified namespace (only once)
+        foreach ($nameTree as $ns) self::includeFile($ns);
+        
+        // initialize the instance
+        $instance = null;
+        
+        // if exact match was requested - skip tree builders, just attempt to call the exact one
+        $exactMatch and $nameTree = [$name];
+        
+        // attempt to execute builders
+        foreach ($nameTree as $builder) {
+            if (self::isBuilderRegistered($builder)) {
+                $init = self::$builders[$builder];
+
+                // create desired instance
+                $opts = array_key_exists('__class', $opts) ? $opts : array_merge($opts, ['__class' => $name[0]]);
+                $opts['__instance'] = $instance;
+                $instance = $init(self::$shares, $opts);
+            }
         }
 
-        self::$defaultBuilders = $path;
+        // at this point we either have the object (builder were available) or not
+        if (!is_null($instance)) {
+            return $instance;
+        }
+        
+        // reaching this point means that no valid builder was found - execute generic ones
+        if (empty($opts)) {
+            return new $name();
+        }
+        
+        return (new \ReflectionClass($name))->newInstanceArgs($opts);
     }
 
     /**
@@ -209,30 +188,38 @@ class Container {
     private static function reduce(string $name) : array {
         $delimiter = '\\';
         $name = explode($delimiter, $name);
-        $index = count($name);
-
+        
         // create handler results
         $result = [];
-        while ($index-- > 0) {
-            $result[] = implode($delimiter, array_slice($name, 0, $index + 1));
+        $index = 0;
+        while ($index++ < count($name)) {
+            $result[] = implode($delimiter, array_slice($name, 0, $index));
         }
 
         return $result;
     }
 
     /**
-     * Includes file with given prefix or load default builder definition file
+     * Attempt to include specified namespace builders.
      *
      * @param string $prefix
      * @return void
      */
     private static function includeFile(string $prefix) {
         if (!in_array($prefix, self::$loadedDefinitions, true) && isset(self::$namespaces[$prefix])) {
-            require_once self::$namespaces[$prefix] . DIRECTORY_SEPARATOR . $prefix . '.php';
+            // get the main path as defined for this namespace prefix
+            $path = self::$namespaces[$prefix];
+            
+            // convert namespace prefix into local path 
+            $localPath = str_replace('\\', \DIRECTORY_SEPARATOR, $prefix);
+            
+            // include builder definitions file
+            require_once $path . DIRECTORY_SEPARATOR . $localPath . '.php';
+            
+            // mark this namespace prefix as loaded - this will make the ioc container skip file loading on subsequent calls
             self::$loadedDefinitions[] = $prefix;
-        } elseif (is_string(self::$defaultBuilders) && !in_array('*', self::$loadedDefinitions, true)) {
-            require_once self::$defaultBuilders;
-            self::$loadedDefinitions[] = '*';
         }
     }
+    
+    /* ------------------------------------ Class Methods END ------------------------------------------ */
 }

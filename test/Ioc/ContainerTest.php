@@ -13,52 +13,73 @@ class ContainerTest extends \PHPUnit\Framework\TestCase
     public static function setUpBeforeClass() {
         // execute parent functionality
         parent::setUpBeforeClass();
-
-        // register a test dependency
-        $object = new \stdClass;
-        $object->dependency = true;
-
-        // test default builder file
-        \Maleficarum\Ioc\Container::setDefaultBuilders(SRC_PATH . DIRECTORY_SEPARATOR . '__definitions' . DIRECTORY_SEPARATOR . 'Default.php');
-
+       
         // test namespaced builder file
         \Maleficarum\Ioc\Container::addNamespace('Namespaced', SRC_PATH . DIRECTORY_SEPARATOR . '__definitions');
+        \Maleficarum\Ioc\Container::addNamespace('Namespaced\Subnamespace', SRC_PATH . DIRECTORY_SEPARATOR . '__definitions');
 
         // test dependency
-        \Maleficarum\Ioc\Container::registerDependency('Registered\Dependency', $object);
-
-        // register a test class builder
-        \Maleficarum\Ioc\Container::register('Registered\Return\Std\Class\With\Values', function ($dep, $opts) {
-            $object = new \stdClass;
-            $object->testValueString = 'string';
-            $object->testValueInteger = 1;
-            isset($opts['injectedValue']) and $object->injectedValue = $opts['injectedValue'];
-            isset($dep['Registered\Dependency']) and $object->iocDependency = $dep['Registered\Dependency'];
-
-            return $object;
+        $object = new \stdClass;
+        $object->dependency = true;
+        
+        \Maleficarum\Ioc\Container::registerShare('Registered\Share', $object);
+        
+        // test builder
+        \Maleficarum\Ioc\Container::registerBuilder('Registered\Return\Std\Class\With\Values', function($dep, $opts){
+            $class = new \stdClass();
+            $class->marker = true;
+            
+            isset($opts['injectedValue']) and $class->injectedValue = $opts['injectedValue'];
+            
+            return$class;
         });
     }
     /* ------------------------------------ Fixtures END ----------------------------------------------- */
 
-    /* ------------------------------------ Method: registerDependency START --------------------------- */
+    /* ------------------------------------ Method: isBuilderRegistered START -------------------------- */
+    public function testIsRegisteredWithFalseResult() {
+        $this->assertFalse(\Maleficarum\Ioc\Container::isBuilderRegistered(uniqid()));
+    }
+
+    public function testIsRegisteredWithTrueResult() {
+        $this->assertTrue(\Maleficarum\Ioc\Container::isBuilderRegistered('Registered\Return\Std\Class\With\Values'));
+    }
+    /* ------------------------------------ Method: isBuilderRegistered END ---------------------------- */
+
+    /* ------------------------------------ Method: registerBuilder START ------------------------------ */
+    /**
+     * @expectedException \RuntimeException
+     */
+    public function testRegisterDuplicatedName() {
+        \Maleficarum\Ioc\Container::registerBuilder('foo', function () { return true; });
+        \Maleficarum\Ioc\Container::registerBuilder('foo', function () { return true; });
+    }
+    /* ------------------------------------ Method: registerBuilder END -------------------------------- */
+    
+    /* ------------------------------------ Method: registerShare START -------------------------------- */
     /**
      * @expectedException \RuntimeException
      */
     public function testRegisterDependencyDuplicatedName() {
-        \Maleficarum\Ioc\Container::registerDependency('foo', []);
-        \Maleficarum\Ioc\Container::registerDependency('foo', []);
+        \Maleficarum\Ioc\Container::registerShare('foo', []);
+        \Maleficarum\Ioc\Container::registerShare('foo', []);
     }
-    /* ------------------------------------ Method: registerDependency END ----------------------------- */
+    /* ------------------------------------ Method: registerShare END ---------------------------------- */
 
-    /* ------------------------------------ Method: setDefaultBuilders START --------------------------- */
+    /* ------------------------------------ Method: retrieveShare START -------------------------------- */
     /**
      * @expectedException \RuntimeException
      */
-    public function testSetDefaultBuildersWithDuplicatePath() {
-        \Maleficarum\Ioc\Container::setDefaultBuilders('./test');
+    public function testRetrieveShareNoShare() {
+        \Maleficarum\Ioc\Container::retrieveShare('bar');
     }
-    /* ------------------------------------ Method: setDefaultBuilders END ----------------------------- */
-
+    
+    public function testRetrieveShareSuccess() {
+        $this->assertInstanceOf('stdClass', \Maleficarum\Ioc\Container::retrieveShare('Registered\Share'));
+    }
+    
+    /* ------------------------------------ Method: retrieveShare END ---------------------------------- */
+        
     /* ------------------------------------ Method: addNamespace START --------------------------------- */
     /**
      * @expectedException \RuntimeException
@@ -67,98 +88,52 @@ class ContainerTest extends \PHPUnit\Framework\TestCase
         \Maleficarum\Ioc\Container::addNamespace('foo', 'bar');
         \Maleficarum\Ioc\Container::addNamespace('foo', 'bar');
     }
-
-    /**
-     * @expectedException \RuntimeException
-     */
-    public function testRegisterDuplicatedName() {
-        \Maleficarum\Ioc\Container::register('foo', function () {
-            return true;
-        });
-
-        \Maleficarum\Ioc\Container::register('foo', function () {
-            return true;
-        });
-    }
     /* ------------------------------------ Method: addNamespace END ----------------------------------- */
-
+    
     /* ------------------------------------ Method: get START ------------------------------------------ */
-    public function testGetDefault() {
+    public function testGetNonBuilderClassWithoutConstructorParameters() {
         $this->assertInstanceOf('stdClass', \Maleficarum\Ioc\Container::get('stdClass'));
     }
 
-    public function testGetWithValues() {
-        $object = \Maleficarum\Ioc\Container::get('Registered\Return\Std\Class\With\Values');
-        $this->assertInstanceOf('stdClass', $object);
-        $this->assertSame($object->testValueString, 'string');
-        $this->assertSame($object->testValueInteger, 1);
-    }
-
-    public function testGetWithInjectedValues() {
-        $object = \Maleficarum\Ioc\Container::get('Registered\Return\Std\Class\With\Values', ['injectedValue' => true]);
-        $this->assertInstanceOf('stdClass', $object);
-        $this->assertSame($object->injectedValue, true);
-    }
-
-    public function testGetWithInjectedDependency() {
-        $object = \Maleficarum\Ioc\Container::get('Registered\Return\Std\Class\With\Values');
-        $this->assertInstanceOf('stdClass', $object->iocDependency);
-        $this->assertSame($object->iocDependency->dependency, true);
-    }
-
-    public function testGetClassDefinedByNamespacedBuilder() {
-        $object = \Maleficarum\Ioc\Container::get('Namespaced\Included\Via\Definitions\File');
-        $this->assertInstanceOf('stdClass', $object);
-        $this->assertSame($object->namespaced_included, true);
-    }
-
-    public function testGetParentDefinedByNamespacedBuilder() {
-        $object = \Maleficarum\Ioc\Container::get('Namespaced\Non\Existent\Builder\With\Parent');
-        $this->assertInstanceOf('stdClass', $object);
-        $this->assertSame($object->namespaced_global, true);
-    }
-
-    public function testGetClassDefinedByDefaultBuilder() {
-        $object = \Maleficarum\Ioc\Container::get('Default\Included\Via\Definitions\File');
-        $this->assertInstanceOf('stdClass', $object);
-        $this->assertSame($object->default_included, true);
-    }
-
-    public function testGetParentDefinedByDefaultBuilder() {
-        $object = \Maleficarum\Ioc\Container::get('Default\Non\Existent\Builder\With\Parent');
-        $this->assertInstanceOf('stdClass', $object);
-        $this->assertSame($object->default_global, true);
+    public function testGetNonBuilderClassWithConstructorParameters() {
+        $dt = \Maleficarum\Ioc\Container::get('DateTime', ['2010-10-10']);
+        $this->assertInstanceOf('DateTime', $dt);
+        $this->assertSame('2010-10-10', $dt->format('Y-m-d'));
     }
     
-    public function testGetAppended() {
-        $object = \Maleficarum\Ioc\Container::get('Namespaced\Appended');
-        $this->assertInstanceOf('stdClass', $object);
-        $this->assertSame($object->namespaced_appended, true);
+    public function testGetDirectlyRegisteredBuilderClassWithoutInjectedValue() {
+        $test = \Maleficarum\Ioc\Container::get('Registered\Return\Std\Class\With\Values');
+        $this->assertInstanceOf('stdClass', $test);
+        $this->assertSame(true, $test->marker);
+        $this->assertFalse(property_exists($test,'injectedValue'));
     }
-
-    public function testGetAppendedCounter() {
-        $object = \Maleficarum\Ioc\Container::get('Namespaced\Appended');
-        $this->assertInstanceOf('stdClass', $object);
-        $this->assertSame($object->appendCount, 2);
+    
+    public function testGetDirectlyRegisteredBuilderClassWithInjectedValue() {
+        $test = \Maleficarum\Ioc\Container::get('Registered\Return\Std\Class\With\Values', ['injectedValue' => 'testInjectedValue']);
+        $this->assertInstanceOf('stdClass', $test);
+        $this->assertTrue($test->marker);
+        $this->assertSame('testInjectedValue', $test->injectedValue);
+    }
+    
+    public function testGetNamespacedTopLevelBuilder() {
+        $test = \Maleficarum\Ioc\Container::get('Namespaced');
+        $this->assertTrue($test->namespaced_global);
+        $this->assertFalse(property_exists($test,'namespace_subnamespace'));
+        $this->assertFalse(property_exists($test,'namespace_subnamespace_testClass'));
+    }
+    
+    public function testGetNamespacedFullBuilderTreeExecution() {
+        $test = \Maleficarum\Ioc\Container::get('Namespaced\Subnamespace\TestClass');
+        $this->assertTrue($test->namespaced_global);
+        $this->assertTrue($test->namespace_subnamespace);
+        $this->assertTrue($test->namespace_subnamespace_testClass);
+    }
+    
+    public function testGetNamespacedExactMatchOnly() {
+        $test = \Maleficarum\Ioc\Container::get('Namespaced\Subnamespace\TestClass', [], true);
+        $this->assertTrue($test->namespace_subnamespace_testClass);
+        $this->assertFalse(property_exists($test,'namespace_subnamespace'));
+        $this->assertFalse(property_exists($test,'namespaced_global'));
     }
     /* ------------------------------------ Method: get END -------------------------------------------- */
-
-    /* ------------------------------------ Method: append START --------------------------------------- */
-    /**
-     * @expectedException \RuntimeException
-     */
-    public function testAppendWithoutMain() {
-        \Maleficarum\Ioc\Container::append(uniqid(), function() {});
-    }
-    /* ------------------------------------ Method: append END ----------------------------------------- */
-    
-    /* ------------------------------------ Method: isRegistered START --------------------------------- */
-    public function testIsRegisteredWithFalseResult() {
-        $this->assertFalse(\Maleficarum\Ioc\Container::isRegistered(uniqid()));
-    }
-
-    public function testIsRegisteredWithTrueResult() {
-        $this->assertTrue(\Maleficarum\Ioc\Container::isRegistered('Registered\Return\Std\Class\With\Values'));
-    }
-    /* ------------------------------------ Method: isRegistered END ----------------------------------- */
 }

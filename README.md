@@ -1,6 +1,16 @@
 # Change Log
 This is the Maleficarum IOC Container implementation. 
 
+## [3.0.0] - 2018-08-31
+> CAUTION:
+> this version completely breaks backwards compatibility with 2.x. DO NOT just replace older version with this one.
+### Changed
+- Changed dependency label to share: This means that registerDependency() and getDependency() methods have been renamed to registerShare() and retrieveShare() respectively.
+- Reversed builder lookup order. With this new version the get() method will go from generic to specific and pass the result of each builder to the next one for refinement.
+- Removed default builder file. If you want to have builders automatically imported you need to register each namespace. (This does not apply to builders added via initializers or manual code execution)
+- Removed builder appends. They were never as useful as we hoped.
+- Updated requirements to PHP 7.2
+
 ## [2.2.0] - 2017-08-10
 ### Added
 - Added support for builder appends.
