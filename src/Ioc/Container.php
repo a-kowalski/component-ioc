@@ -160,7 +160,7 @@ class Container {
                 $init = self::$builders[$builder];
 
                 // create desired instance
-                $opts = array_key_exists('__class', $opts) ? $opts : array_merge($opts, ['__class' => $name[0]]);
+                $opts = array_key_exists('__class', $opts) ? $opts : array_merge($opts, ['__class' => $name]);
                 $opts['__instance'] = $instance;
                 $instance = $init(self::$shares, $opts);
             }

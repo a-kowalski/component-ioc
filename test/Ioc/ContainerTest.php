@@ -118,6 +118,7 @@ class ContainerTest extends \PHPUnit\Framework\TestCase
     public function testGetNamespacedTopLevelBuilder() {
         $test = \Maleficarum\Ioc\Container::get('Namespaced');
         $this->assertTrue($test->namespaced_global);
+        $this->assertSame('Namespaced', $test->class_name);
         $this->assertFalse(property_exists($test,'namespace_subnamespace'));
         $this->assertFalse(property_exists($test,'namespace_subnamespace_testClass'));
     }
@@ -125,6 +126,7 @@ class ContainerTest extends \PHPUnit\Framework\TestCase
     public function testGetNamespacedFullBuilderTreeExecution() {
         $test = \Maleficarum\Ioc\Container::get('Namespaced\Subnamespace\TestClass');
         $this->assertTrue($test->namespaced_global);
+        $this->assertSame('Namespaced\Subnamespace\TestClass', $test->class_name);
         $this->assertTrue($test->namespace_subnamespace);
         $this->assertTrue($test->namespace_subnamespace_testClass);
     }
@@ -132,6 +134,7 @@ class ContainerTest extends \PHPUnit\Framework\TestCase
     public function testGetNamespacedExactMatchOnly() {
         $test = \Maleficarum\Ioc\Container::get('Namespaced\Subnamespace\TestClass', [], true);
         $this->assertTrue($test->namespace_subnamespace_testClass);
+        $this->assertSame('Namespaced\Subnamespace\TestClass', $test->class_name);
         $this->assertFalse(property_exists($test,'namespace_subnamespace'));
         $this->assertFalse(property_exists($test,'namespaced_global'));
     }
