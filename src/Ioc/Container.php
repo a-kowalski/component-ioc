@@ -111,6 +111,12 @@ class Container {
      * @return mixed
      */
     public static function retrieveShare(string $name) {
+		// fetch decremental builder names
+        $nameTree = self::reduce($name);
+        
+        // lazy-load IOC definitions for specified namespace (only once)
+        foreach ($nameTree as $ns) self::includeFile($ns);
+		
         if (!array_key_exists($name, self::$shares)) {
             throw new \RuntimeException(sprintf('Share with given name is not registered. \%s::retrieveShare()', static::class));
         }
